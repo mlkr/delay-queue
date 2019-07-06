@@ -148,6 +148,8 @@ func tickHandler(t time.Time, bucketName string) {
 			return
 		}
 
+		log.Println("bucketItem.jobId", bucketItem.jobId)
+
 		// 延迟时间小于等于当前时间, 取出Job元信息并放入ready queue
 		job, err := getJob(bucketItem.jobId)
 		if err != nil {
@@ -161,8 +163,13 @@ func tickHandler(t time.Time, bucketName string) {
 			continue
 		}
 
+		log.Println("job", job)
+		log.Println(time.Unix(job.Delay, 0).Format("2006-01-02 03:04:05 PM"))
+
 		// 再次确认元信息中delay是否小于等于当前时间
 		if job.Delay > t.Unix() {
+			log.Println("bucketName:", bucketName)
+			log.Println("bucketItem.jobId:", bucketItem.jobId)
 			// 从bucket中删除旧的jobId
 			removeFromBucket(bucketName, bucketItem.jobId)
 			// 重新计算delay时间并放入bucket中
