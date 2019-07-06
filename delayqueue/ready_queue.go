@@ -3,7 +3,7 @@ package delayqueue
 import (
 	"fmt"
 
-	"github.com/ouqiang/delay-queue/config"
+	"github.com/mlkr/delay-queue/config"
 )
 
 // 添加JobId到队列中

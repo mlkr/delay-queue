@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/ouqiang/delay-queue/config"
+	"github.com/mlkr/delay-queue/config"
 )
 
 var (
