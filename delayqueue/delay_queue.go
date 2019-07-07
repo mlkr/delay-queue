@@ -225,7 +225,6 @@ func httpPost(url, jobId string) bool {
 
 	resp, err := http.Post(url, "application/x-www-form-urlencoded", strings.NewReader(fmt.Sprintf("id=%s", jobId)))
 	if err != nil {
-		Remove(jobId)
 		log.Printf("访问回调地址失败#%s", err.Error())
 		return false
 	}
@@ -248,6 +247,7 @@ func httpPost(url, jobId string) bool {
 	ans := &Ans{}
 	err = json.Unmarshal(body, ans)
 	if err != nil {
+		Remove(jobId)
 		log.Printf("回调, 解析json失败#%s#%s", err.Error(), string(body))
 		return false
 	}
