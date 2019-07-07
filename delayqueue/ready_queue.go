@@ -2,7 +2,6 @@ package delayqueue
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/mlkr/delay-queue/config"
 )
@@ -23,8 +22,6 @@ func blockPopFromReadyQueue(queues []string, timeout int) (string, error) {
 		args = append(args, queue)
 	}
 	args = append(args, timeout)
-
-	log.Println("args", args)
 
 	value, err := execRedisCommand("BLPOP", args...)
 	if err != nil {

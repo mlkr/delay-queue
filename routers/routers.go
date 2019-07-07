@@ -36,9 +36,15 @@ func Push(resp http.ResponseWriter, req *http.Request) {
 		resp.Write(generateFailureBody("job id不能为空"))
 		return
 	}
-	if job.Topic == "" {
-		resp.Write(generateFailureBody("topic 不能为空"))
+	if job.Callback == "" {
+		resp.Write(generateFailureBody("callback 不能为空"))
 		return
+	}
+	if job.Topic == "" {
+		job.Topic = "order"
+	}
+	if job.TTR == 0 {
+		job.TTR = 60
 	}
 
 	if job.Delay <= 0 || job.Delay > (1<<31) {

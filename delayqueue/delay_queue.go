@@ -1,9 +1,13 @@
 package delayqueue
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
+	"net/http"
+	"strings"
 	"time"
 
 	"github.com/mlkr/delay-queue/config"
@@ -21,6 +25,7 @@ func Init() {
 	RedisPool = initRedisPool()
 	initTimers()
 	bucketNameChan = generateBucketName()
+	initListeners()
 }
 
 // Push 添加一个Job到队列中
@@ -148,8 +153,6 @@ func tickHandler(t time.Time, bucketName string) {
 			return
 		}
 
-		log.Println("bucketItem.jobId", bucketItem.jobId)
-
 		// 延迟时间小于等于当前时间, 取出Job元信息并放入ready queue
 		job, err := getJob(bucketItem.jobId)
 		if err != nil {
@@ -163,13 +166,8 @@ func tickHandler(t time.Time, bucketName string) {
 			continue
 		}
 
-		log.Println("job", job)
-		log.Println(time.Unix(job.Delay, 0).Format("2006-01-02 03:04:05 PM"))
-
 		// 再次确认元信息中delay是否小于等于当前时间
 		if job.Delay > t.Unix() {
-			log.Println("bucketName:", bucketName)
-			log.Println("bucketItem.jobId:", bucketItem.jobId)
 			// 从bucket中删除旧的jobId
 			removeFromBucket(bucketName, bucketItem.jobId)
 			// 重新计算delay时间并放入bucket中
@@ -187,4 +185,77 @@ func tickHandler(t time.Time, bucketName string) {
 		// 从bucket中删除
 		removeFromBucket(bucketName, bucketItem.jobId)
 	}
+}
+
+func initListeners() {
+	timers = make([]*time.Ticker, config.Setting.BucketSize)
+	for i := 0; i < config.Setting.BucketSize; i++ {
+		timers[i] = time.NewTicker(1 * time.Second)
+		go listen(timers[i])
+	}
+}
+
+func listen(timer *time.Ticker) {
+	for {
+		select {
+		case <-timer.C:
+			job, err := Pop([]string{"order"})
+			if err != nil {
+				log.Printf("获取job失败#%s", err.Error())
+				continue
+			}
+
+			if job == nil {
+				continue
+			}
+
+			// 访问回调
+			if httpPost(job.Callback, job.Id) {
+				err = Remove(job.Id)
+				if err != nil {
+					log.Printf("回调成功,删除job失败#%s", err.Error())
+				}
+			}
+		}
+	}
+}
+
+func httpPost(url, jobId string) bool {
+	log.Printf("访问回调#%s#%s", url, jobId)
+
+	resp, err := http.Post(url, "application/x-www-form-urlencoded", strings.NewReader(fmt.Sprintf("id=%s", jobId)))
+	if err != nil {
+		Remove(jobId)
+		log.Printf("访问回调地址失败#%s", err.Error())
+		return false
+	}
+
+	defer resp.Body.Close()
+
+	type Ans struct {
+		Code    int    `json:"code"`
+		Data    string `json:"data"`
+		Message string `json:"message"`
+		Title   string `json:"title"`
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Printf("回调, 读取body错误#%s", err.Error())
+		return false
+	}
+
+	ans := &Ans{}
+	err = json.Unmarshal(body, ans)
+	if err != nil {
+		log.Printf("回调, 解析json失败#%s#%s", err.Error(), string(body))
+		return false
+	}
+
+	if ans.Code < 0 {
+		log.Printf("回调没有执行成功#%s", ans.Message)
+		return false
+	}
+
+	return true
 }
