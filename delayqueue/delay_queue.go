@@ -210,7 +210,7 @@ func listen(timer *time.Ticker) {
 			}
 
 			// 访问回调
-			if httpPost(job.Callback, job.Id) {
+			if httpPost(job.Callback, job) {
 				err = Remove(job.Id)
 				if err != nil {
 					log.Printf("回调成功,删除job失败#%s", err.Error())
@@ -220,10 +220,10 @@ func listen(timer *time.Ticker) {
 	}
 }
 
-func httpPost(url, jobId string) bool {
-	log.Printf("访问回调#%s#%s", url, jobId)
+func httpPost(url string, job *Job) bool {
+	log.Printf("访问回调#%s#%v", url, job)
 
-	resp, err := http.Post(url, "application/x-www-form-urlencoded", strings.NewReader(fmt.Sprintf("id=%s", jobId)))
+	resp, err := http.Post(url, "application/x-www-form-urlencoded", strings.NewReader(fmt.Sprintf("id=%s&body=%s", job.Id, job.Body)))
 	if err != nil {
 		log.Printf("访问回调地址失败#%s", err.Error())
 		return false
@@ -247,7 +247,7 @@ func httpPost(url, jobId string) bool {
 	ans := &Ans{}
 	err = json.Unmarshal(body, ans)
 	if err != nil {
-		Remove(jobId)
+		Remove(job.Id)
 		log.Printf("回调, 解析json失败#%s#%s", err.Error(), string(body))
 		return false
 	}
