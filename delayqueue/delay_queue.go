@@ -222,7 +222,6 @@ func listen(timer *time.Ticker) {
 
 func httpPost(url string, job *Job) bool {
 	log.Printf("访问回调#%s#%v", url, job)
-	log.Println("body:", job.Body)
 
 	resp, err := http.Post(url, "application/x-www-form-urlencoded", strings.NewReader(fmt.Sprintf("id=%s&body=%s", job.Id, job.Body)))
 	if err != nil {
@@ -248,7 +247,6 @@ func httpPost(url string, job *Job) bool {
 	ans := &Ans{}
 	err = json.Unmarshal(body, ans)
 	if err != nil {
-		Remove(job.Id)
 		log.Printf("回调, 解析json失败#%s#%s", err.Error(), string(body))
 		return false
 	}
