@@ -222,6 +222,7 @@ func listen(timer *time.Ticker) {
 
 func httpPost(url string, job *Job) bool {
 	log.Printf("访问回调#%s#%v", url, job)
+	log.Println("body:", job.Body)
 
 	resp, err := http.Post(url, "application/x-www-form-urlencoded", strings.NewReader(fmt.Sprintf("id=%s&body=%s", job.Id, job.Body)))
 	if err != nil {
